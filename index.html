@@ -11,7 +11,7 @@
     <p>
     When sending messages via <code>postMessage</code> to an AudioWorklet node within
     an <code>OfflineAudioContext</code>, it is necessary to either introduce an artificial
-    delay, or post a message back to the main thread "acknowledging" the receipt of
+    delay (this isn't a deterministic or reliable solution), or post a message back to the main thread "acknowledging" the receipt of
     the message before <code>startRendering</code> is called on the offline context.
     </p>
     <p>
@@ -26,7 +26,10 @@
     they have called <code>postMessage</code>. After some fiddling, they might
     assume that the async nature of the <code>postMessage</code> call is to blame, and
     insert a delay before calling <code>startRendering</code> on the context. This is
-    what happens when clicking on the <code>Render With Delay</code> button.
+    what happens when clicking on the <code>Render With Delay</code> button. This solution might
+    work for 99% of cases, but this poor developer will end up with strange bug reports in the 
+    future, because adding a delay is inherently problematic since it depends on the thread 
+    timings/scheduling of whatever platform you're running on.
     </p>
     
     <table style="outline: solid 1px #333">
