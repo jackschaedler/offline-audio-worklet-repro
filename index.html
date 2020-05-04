@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Offline Rendering of Audio Worklet</title>
+  </head>
+  <body>
+    <h1> Offline rendering of an AudioWorklet node</h1>
+    <h3> What is being demonstrated here? </h3>
+    <p>
+    When sending messages via <code>postMessage</code> to an AudioWorklet node within
+    an <code>OfflineAudioContext</code>, it is necessary to either introduce an artificial
+    delay, or post a message back to the main thread "acknowledging" the receipt of
+    the message before <code>startRendering</code> is called on the offline context. (view source!)
+    </p>
+    <p>
+    This page sets up a very simple signal flow within an <code>OfflineAudioContext</code>: 
+    An <code>OscillatorNode</code> is fed into an <code>AudioWorklet</code> node. 
+    This <code>AudioWorklet</code> node is essentially a bypass, but it only passes audio if 
+    it has received at least one message via its <code>port</code>.
+    </p>
+    <p>
+    It may be slightly surprising for a developer who writes the code which is run when pressing
+    the <code>Render Immediately</code> button to realize that no sound is rendered, even though
+    they have called <code>postMessage</code>. After some fiddling, they might
+    assume that the async nature of the <code>postMessage</code> call is to blame, and
+    insert a delay before calling <code>startRendering</code> on the context. This is
+    what happens when clicking on the <code>Render With Delay</code> button.
+    </p>
+    
+    <table style="outline: solid 1px #333">
+      <tr>
+        <td>
+          <button onclick="renderImmediate()"> Render Immediately </button>
+        </td>
+        <td>
+          <button onclick="renderDelayed()"> Render With Delay </button>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          Pressing this button will render the signal flow as outlined above for 1 second
+          inside an <code>OfflineAudioContext</code>. It will then play back the resulting
+          buffer. Because <code>startRendering</code> is called immediately after <code>postMessage</code>,
+          the resulting buffer will (almost always) be silent.
+        </td>
+        <td>
+          Pressing this button will render the signal flow as outlined above for 1 second
+          inside an <code>OfflineAudioContext</code>. It will then play back the resulting
+          buffer. Because <code>startRendering</code> is called a short time after <code>postMessage</code>,
+          the resulting buffer will have audible output in it.
+        </td>
+      </tr>
+    </table>
+    
+    
+
+    <h3>What's the point?</h3>
+    <p>
+    Would it make sense for <code>AudioWorklet</code> nodes inside an offline context to always 
+    ensure that all pending <code>postMessage</code> calls are finished/handled before calls to
+    <code>process</code>?
+    </p>
+
+    <script type="module">
+      window.playBackContext = new AudioContext();
+
+      window.playBuffer = (buffer) => {
+        const bufferSourceNode = new AudioBufferSourceNode(window.playBackContext);
+        bufferSourceNode.buffer = buffer;
+        bufferSourceNode.connect(window.playBackContext.destination);
+        bufferSourceNode.start();
+      }
+
+      window.renderContext = (context) => {
+        context.startRendering().then(buffer => {
+          console.log(buffer);
+          playBuffer(buffer);
+        })
+      }
+
+      window.renderImmediate = async () => {
+        window.playBackContext.resume();
+        const context = new OfflineAudioContext(1, 44100, 44100);
+        const oscillator = new OscillatorNode(context);
+        await context.audioWorklet.addModule('switch-processor.js');
+        const switcher = new AudioWorkletNode(context, 'switch-processor');
+        oscillator.connect(switcher).connect(context.destination);
+        oscillator.start(0);
+        switcher.port.postMessage("on");
+        // Immediately render the offline context.
+        renderContext(context);
+      }
+
+      window.renderDelayed = async () => {
+        window.playBackContext.resume();
+        const context = new OfflineAudioContext(1, 44100, 44100);
+        const oscillator = new OscillatorNode(context);
+        await context.audioWorklet.addModule('switch-processor.js');
+        const switcher = new AudioWorkletNode(context, 'switch-processor');
+        oscillator.connect(switcher).connect(context.destination);
+        oscillator.start(0);
+        switcher.port.postMessage("on");
+        // Wait 100 ms for the postMessage to finish.
+        setTimeout(() => { renderContext(context); }, 100);
+      }
+    </script>
+  </body>
+</html>
