@@ -12,7 +12,7 @@
     When sending messages via <code>postMessage</code> to an AudioWorklet node within
     an <code>OfflineAudioContext</code>, it is necessary to either introduce an artificial
     delay, or post a message back to the main thread "acknowledging" the receipt of
-    the message before <code>startRendering</code> is called on the offline context. (view source!)
+    the message before <code>startRendering</code> is called on the offline context.
     </p>
     <p>
     This page sets up a very simple signal flow within an <code>OfflineAudioContext</code>: 
@@ -58,9 +58,13 @@
 
     <h3>What's the point?</h3>
     <p>
-    Would it make sense for <code>AudioWorklet</code> nodes inside an offline context to always 
+    Perhaps it would make sense for <code>AudioWorklet</code> nodes inside an offline context to always 
     ensure that all pending <code>postMessage</code> calls are finished/handled before calls to
     <code>process</code>?
+    </p>
+    <p>
+      Here's the code on github: <a href="https://github.com/jackschaedler/offline-audio-worklet-repro">Link.</a>
+      Alternatively, you can just view-source.
     </p>
 
     <script type="module">
